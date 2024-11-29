@@ -1,108 +1,136 @@
-const puppeteer = require('puppeteer-core');
-const path = require('path');
+const express = require("express");
+const puppeteer = require("puppeteer-extra");
+const StealthPlugin = require("puppeteer-extra-plugin-stealth");
+require("dotenv").config();
 
-async function joinGoogleMeet(meetUrl, userEmail, userPassword) {
-  // Set the path to your installed browser (e.g., Chrome, Chromium, or Edge)
-  const browserPath = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';  // Change this path if needed
+puppeteer.use(StealthPlugin());
 
-  const browser = await puppeteer.launch({
-    headless: false,
-    executablePath: browserPath,  // Path to your browser (e.g., Chrome/Edge)
-    args: [
-      '--use-fake-ui-for-media-stream',
-      '--enable-usermedia-screen-capturing',
-      '--start-maximized',
-    ],
-  });
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-  const page = await browser.newPage();
+// Main API Endpoint
+app.get("/join-meet", async (req, res) => {
+  const meetId = req.query.meetId;
+
+  if (!meetId) {
+    return res.status(400).json({ error: "Missing 'meetId' in query parameters." });
+  }
 
   try {
-    console.log("Navigating to Google Login...");
-    await page.goto('https://accounts.google.com', { waitUntil: 'domcontentloaded' });
-
-    // Log in to Google Account
-    console.log("Entering Google credentials...");
-    await page.waitForSelector('input[type="email"]', { timeout: 10000 });
-    await page.type('input[type="email"]', userEmail);
-    await page.click('#identifierNext');
-
-    // Wait for password field to appear
-    await page.waitForSelector('input[type="password"]', { visible: true, timeout: 10000 });
-    await page.type('input[type="password"]', userPassword);
-    await page.click('#passwordNext');
-
-    // Wait for successful login
-    await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
-    console.log("Logged in successfully.");
-
-    // Go to the Google Meet URL
-    console.log("Navigating to the Google Meet URL...");
-    await page.goto(meetUrl, { waitUntil: 'networkidle0', timeout: 30000 });
-
-    // Close any unnecessary popups that appear (e.g., permissions or notifications)
-    try {
-      console.log("Looking for popups...");
-      await page.waitForSelector('button[aria-label="Close"]', { timeout: 5000 });
-      await page.click('button[aria-label="Close"]');
-      console.log("Popup closed.");
-    } catch (popupError) {
-      console.log("No popup found or it took too long to appear.");
-    }
-
-    // Check if we're already in the meeting (look for Join now button)
-    try {
-      console.log("Waiting for 'Join now' button...");
-      await page.waitForSelector('button[aria-label="Join now"]', { timeout: 10000 });
-
-      // If the button is found, click it to join the meeting
-      console.log("Clicking the 'Join now' button...");
-      await page.click('button[aria-label="Join now"]');
-      console.log("Bot has joined the Google Meet successfully.");
-
-    } catch (joinError) {
-      console.log("Join button not found. Trying to enter a name...");
-
-      // If no 'Join now' button, check if we need to enter a name
-      try {
-        console.log("Looking for the name input field...");
-        await page.waitForSelector('input[aria-label="Enter your name"]', { timeout: 10000 });
-        await page.type('input[aria-label="Enter your name"]', 'Bot User');
-        console.log("Name entered. Now attempting to join...");
-
-        await page.waitForSelector('button[aria-label="Join now"]', { timeout: 10000 });
-        await page.click('button[aria-label="Join now"]');
-        console.log("Bot has joined the Google Meet after entering the name.");
-
-      } catch (innerError) {
-        console.error("Failed to enter the name and join the meeting: ", innerError.message);
-      }
-    }
-
-    // Optional: Check for microphone and camera buttons to mute and turn off video
-    try {
-      console.log("Checking if mic and camera need to be muted/off...");
-      await page.waitForSelector('button[aria-label="Turn off microphone"]', { timeout: 5000 });
-      await page.click('button[aria-label="Turn off microphone"]');
-      console.log("Microphone turned off.");
-
-      await page.waitForSelector('button[aria-label="Turn off camera"]', { timeout: 5000 });
-      await page.click('button[aria-label="Turn off camera"]');
-      console.log("Camera turned off.");
-    } catch (mediaError) {
-      console.log("Could not mute mic or turn off camera: ", mediaError.message);
-    }
-
+    await startGoogleMeetBot(meetId);
+    res.status(200).json({ message: `Successfully attempted to join the meeting with ID: ${meetId}` });
   } catch (error) {
-    console.error("An error occurred during the process: ", error.message);
-  } finally {
-    console.log("Closing browser...");
-    await browser.close();
+    console.error("Error occurred while joining the Google Meet:", error);
+    res.status(500).json({ error: "An error occurred while processing the request." });
+  }
+});
+
+async function startGoogleMeetBot() {
+  // Google Meet code
+  const meetCode = 'ztn-hyku-izq';
+
+  // Launch the browser with desired settings
+  const browser = await puppeteer.launch({
+    headless: false,
+    args: [
+      "--disable-notifications",
+      "--enable-automation",
+      "--start-maximized",
+    ],
+    ignoreDefaultArgs: false,
+  });
+
+  const [page] = await browser.pages();
+
+  // Navigate to Google sign-in page
+  await page.goto("https://accounts.google.com");
+
+  // Set browser permissions
+  const context = browser.defaultBrowserContext();
+  await context.clearPermissionOverrides();
+  await context.overridePermissions(`https://meet.google.com/${meetCode}`, [
+    "camera",
+    "microphone",
+    "notifications",
+  ]);
+
+  // Log in to Google account
+  await signInToGoogle(page);
+
+  // Navigate to Google Meet link
+  await page.goto(`https://meet.google.com/${meetCode}`);
+
+  // Mute camera and microphone, then join the meeting
+  await muteCameraAndMicrophone(page);
+  await joinMeeting(page);
+}
+
+async function signInToGoogle(page) {
+  // Wait for email input and type the email
+  await page.waitForSelector('input[type="email"]');
+  await page.type('input[type="email"]', process.env.email);
+
+  // Click the "Next" button
+  const nextButton = await page.$x("//span[contains(text(), 'Next')]");
+  if (nextButton.length > 0) {
+    await nextButton[0].click();
+  } else {
+    console.error('Button with text "Next" not found.');
+  }
+
+  // Wait for password input, then type the password
+  await page.waitForTimeout(3500);
+  await page.waitForSelector('input[type="password"]');
+  await page.type('input[type="password"]', process.env.password);
+
+  // Click the "Next" button again
+  const nextButtonPassword = await page.$x("//span[contains(text(), 'Next')]");
+  if (nextButtonPassword.length > 0) {
+    await nextButtonPassword[0].click();
+  } else {
+    console.error('Button with text "Next" not found.');
+  }
+
+  // Wait for navigation to complete
+  await page.waitForNavigation();
+}
+
+async function muteCameraAndMicrophone(page) {
+  // Wait for and click microphone mute button
+  await page.waitForSelector(
+    ".U26fgb.JRY2Pb.mUbCce.kpROve.yBiuPb.y1zVCf.M9Bg4d.HNeRed"
+  );
+  await page.click(
+    ".U26fgb.JRY2Pb.mUbCce.kpROve.yBiuPb.y1zVCf.M9Bg4d.HNeRed"
+  );
+
+  // Wait for and click camera off button
+  await page.waitForSelector(
+    ".U26fgb.JRY2Pb.mUbCce.kpROve.yBiuPb.y1zVCf.M9Bg4d.HNeRed"
+  );
+  await page.click(
+    ".U26fgb.JRY2Pb.mUbCce.kpROve.yBiuPb.y1zVCf.M9Bg4d.HNeRed"
+  );
+}
+
+async function joinMeeting(page) {
+  // Wait and try to click "Ask to join" or "Join now" button
+  await page.waitForTimeout(2500);
+  const askToJoinButton = await page.$x("//span[contains(text(), 'Ask to join')]");
+  if (askToJoinButton.length > 0) {
+    await askToJoinButton[0].click();
+  } else {
+    const joinNowButton = await page.$x("//span[contains(text(), 'Join now')]");
+    if (joinNowButton.length > 0) {
+      await joinNowButton[0].click();
+    } else {
+      console.error('Button with text "Join Now" not found.');
+    }
   }
 }
 
-const meetUrl = "https://meet.google.com/dge-dfcs-ywu";  // Replace with the Google Meet URL
-const userEmail = "21cs34@lingayasvidyapeeth.edu.in";  // Your Google account email
-const userPassword = "pswd2024";  // Your Google account password
 
-joinGoogleMeet(meetUrl, userEmail, userPassword);
+// Start the server
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
+});
