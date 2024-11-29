@@ -40,7 +40,7 @@ async function startGoogleMeetBot(meetCode) {
 
   // Launch the browser with desired settings
   const browser = await puppeteer.launch({
-    headless: process.env.headless,
+    headless: false,
     args: [
       "--disable-notifications",
       "--enable-automation",

@@ -16,7 +16,7 @@
     "ejs": "^3.1.6",
     "express": "^4.17.1",
     "googleapis": "^39.2.0",
-    "nodemon": "^3.0.1",
+    "nodemon": "^3.1.7",
     "puppeteer": "^10.4.0",
     "puppeteer-extra": "^3.2.1",
     "puppeteer-extra-plugin-stealth": "^2.8.1",
