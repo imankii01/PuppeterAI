@@ -34,7 +34,37 @@ app.get("/join-meet", async (req, res) => {
       .json({ error: "An error occurred while processing the request." });
   }
 });
-
+app.get('/', (req, res) => {
+  const html = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Server Status</title>
+          <style>
+              body {
+                  font-family: Arial, sans-serif;
+                  text-align: center;
+                  padding: 50px;
+                  background-color: #f4f4f9;
+                  color: #333;
+              }
+              .status {
+                  font-size: 24px;
+                  color: green;
+              }
+          </style>
+      </head>
+      <body>
+          <h1>Meet Bot Server</h1>
+          <p class="status">Status: <strong>Running</strong></p>
+          <p>Server is up and running on port ${PORT}.</p>
+      </body>
+      </html>
+  `;
+  res.send(html);
+});
 async function startGoogleMeetBot(meetCode) {
   // Google Meet code
 
