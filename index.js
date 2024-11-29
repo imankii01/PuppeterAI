@@ -22,11 +22,9 @@ app.get("/join-meet", async (req, res) => {
 
   try {
     await startGoogleMeetBot(meetId);
-    res
-      .status(200)
-      .json({
-        message: `Successfully attempted to join the meeting with ID: ${meetId}`
-      });
+    res.status(200).json({
+      message: `Successfully attempted to join the meeting with ID: ${meetId}`
+    });
   } catch (error) {
     console.error("Error occurred while joining the Google Meet:", error);
     res
@@ -34,7 +32,7 @@ app.get("/join-meet", async (req, res) => {
       .json({ error: "An error occurred while processing the request." });
   }
 });
-app.get('/', (req, res) => {
+app.get("/", (req, res) => {
   const html = `
       <!DOCTYPE html>
       <html lang="en">
@@ -70,13 +68,14 @@ async function startGoogleMeetBot(meetCode) {
 
   // Launch the browser with desired settings
   const browser = await puppeteer.launch({
-    headless: false,
+    headless: true, // Ensure headless mode
     args: [
-      "--disable-notifications",
-      "--enable-automation",
-      "--start-maximized",
-      "--use-fake-ui-for-media-stream", // Automatically grant media permissions
-      "--enable-usermedia-screen-capturing"
+      "--no-sandbox",
+      "--disable-setuid-sandbox", // Disable the sandbox (required for some environments like EC2)
+      "--disable-dev-shm-usage", // Disable shared memory usage (important for Docker/EC2)
+      "--remote-debugging-port=9222", // Enable remote debugging (optional)
+      "--disable-gpu", // Disable GPU acceleration (optional)
+      "--window-size=1280x1024" // Set window size (optional)
     ],
     ignoreDefaultArgs: false
   });
