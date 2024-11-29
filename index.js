@@ -22,9 +22,11 @@ app.get("/join-meet", async (req, res) => {
 
   try {
     await startGoogleMeetBot(meetId);
-    res.status(200).json({
-      message: `Successfully attempted to join the meeting with ID: ${meetId}`
-    });
+    res
+      .status(200)
+      .json({
+        message: `Successfully attempted to join the meeting with ID: ${meetId}`
+      });
   } catch (error) {
     console.error("Error occurred while joining the Google Meet:", error);
     res
@@ -32,50 +34,19 @@ app.get("/join-meet", async (req, res) => {
       .json({ error: "An error occurred while processing the request." });
   }
 });
-app.get("/", (req, res) => {
-  const html = `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Server Status</title>
-          <style>
-              body {
-                  font-family: Arial, sans-serif;
-                  text-align: center;
-                  padding: 50px;
-                  background-color: #f4f4f9;
-                  color: #333;
-              }
-              .status {
-                  font-size: 24px;
-                  color: green;
-              }
-          </style>
-      </head>
-      <body>
-          <h1>Meet Bot Server</h1>
-          <p class="status">Status: <strong>Running</strong></p>
-          <p>Server is up and running on port ${PORT}.</p>
-      </body>
-      </html>
-  `;
-  res.send(html);
-});
+
 async function startGoogleMeetBot(meetCode) {
   // Google Meet code
 
   // Launch the browser with desired settings
   const browser = await puppeteer.launch({
-    headless: true, // Ensure headless mode
+    headless: process.env.headless,
     args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox", // Disable the sandbox (required for some environments like EC2)
-      "--disable-dev-shm-usage", // Disable shared memory usage (important for Docker/EC2)
-      "--remote-debugging-port=9222", // Enable remote debugging (optional)
-      "--disable-gpu", // Disable GPU acceleration (optional)
-      "--window-size=1280x1024" // Set window size (optional)
+      "--disable-notifications",
+      "--enable-automation",
+      "--start-maximized",
+      "--use-fake-ui-for-media-stream", // Automatically grant media permissions
+      "--enable-usermedia-screen-capturing"
     ],
     ignoreDefaultArgs: false
   });
