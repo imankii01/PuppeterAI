@@ -9,6 +9,32 @@ puppeteer.use(StealthPlugin());
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+app.get("/", (req, res) => {
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Server Status</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+          }
+          .status {
+            font-size: 1.5em;
+            color: green;
+          }
+        </style>
+      </head>
+      <body>
+        <h1>Server is Live!</h1>
+        <p class="status">Your Node.js server is running successfully.</p>
+      </body>
+    </html>
+  `;
+  res.status(200).send(htmlContent);
+});
 
 app.get("/join-meet", async (req, res) => {
   const meetId = req.query.meetId;
