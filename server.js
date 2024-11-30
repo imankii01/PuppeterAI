@@ -60,18 +60,18 @@ app.get("/join-meet", async (req, res) => {
 
 async function startGoogleMeetBot(meetCode) {
   const browser = await puppeteer.launch({
-    headless: true,
     executablePath: '/usr/bin/google-chrome', // Adjust based on Step 2 output
-
+    headless: true,
     args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
       "--disable-notifications",
-      "--enable-automation",
-      "--start-maximized",
       "--use-fake-ui-for-media-stream",
-      "--enable-usermedia-screen-capturing"
     ],
-    ignoreDefaultArgs: false
   });
+  
 
   const [page] = await browser.pages();
 
