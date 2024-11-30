@@ -60,9 +60,7 @@ app.get("/join-meet", async (req, res) => {
 
 async function startGoogleMeetBot(meetCode) {
   const browser = await puppeteer.launch({
-    headless: true,
-    executablePath: '/usr/bin/google-chrome', // Adjust based on Step 2 output
-
+    headless: false,
     args: [
       "--disable-notifications",
       "--enable-automation",
