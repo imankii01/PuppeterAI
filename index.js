@@ -3,6 +3,7 @@ const puppeteer = require("puppeteer-extra");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const fs = require("fs");
 const path = require("path");
+const GoogleMeetOAuthBot = require("./GoogleMeetOuthBoat");
 require("dotenv").config();
 
 puppeteer.use(StealthPlugin());
@@ -35,6 +36,7 @@ app.get("/", (req, res) => {
   `;
   res.status(200).send(htmlContent);
 });
+app.post("/GoogleMeetOAuthBot", GoogleMeetOAuthBot());
 
 app.get("/join-meet", async (req, res) => {
   const meetId = req.query.meetId;
